@@ -4,7 +4,9 @@
 
 Mnemosyne began as a personal research project with a stubborn question: *is voice something we can only recognize, or can we actually measure it?* Most tools that touch this question are framed as AI detectors. Mnemosyne is not one, and the research it produced is explicitly anti-detector: a detector hands down a verdict; a measurement places a text in a calibrated space and shows its work, so that every claim can fail loudly.
 
-This page is a preview. The full research release — instrument, validation harness, replication data, and a paper — is being prepared now (see *Status*, below).
+**The research is live (July 2026):** the paper — *The Width of a Voice: Placing Machine Imitation Inside Authors' Own Variation* — is published as a preprint at **[doi:10.5281/zenodo.21210011](https://doi.org/10.5281/zenodo.21210011)** (CC BY 4.0, targeting CHR 2027), and the full companion release — instrument, validation harness, corpora, recorded results, and the complete adversarial-review record — is public at **[wbryanta/author-manifold](https://github.com/wbryanta/author-manifold)**. Essays and context: **[wbryanta.github.io](https://wbryanta.github.io)**.
+
+**Want to try something right now?** The folk-"AI tells" scorer lives in [`tells/`](tells/) — a zero-dependency script with CC0 data that scores any prose against the twelve popular tells and re-derives all 179 published statistics via `--reproduce`. Score your own writing, or your accuser's.
 
 ## From instrument to research program
 
@@ -22,7 +24,7 @@ The measurement runs on two layers with very different behavior:
 A paper — *The Width of a Voice: Placing Machine Imitation Inside Authors' Own Variation* — is drafted and frozen against audited evidence. Five findings preview what it argues:
 
 1. **Imitation is real, small, and lives on function words.** Across eight LLMs (Claude, GPT, and local open-weight models) prompted to imitate fifteen novelists, naming the author roughly triples envelope entry on the function-word layer (from a 10.7% unprompted base rate to 30.5%) — and still, roughly seven in ten imitation samples land outside the target author's own range of variation.
-2. **The chassis does not move.** Style prompting transfers texture, but the function-word layer's movement toward the target is statistically indistinguishable from zero. A model's function-word distribution behaves less like a style it can wear than a substrate it generates from.
+2. **The chassis barely moves.** Style prompting transfers texture, but prompting closes only ~6% of the function-word gap toward the target — and none of the broader most-frequent-word gap, whose movement is statistically indistinguishable from zero. A model's function-word distribution behaves less like a style it can wear than a substrate it generates from.
 3. **The author's text beats the author's name.** Handing a model an author's actual opening pages (with no name attached) out-performs naming the author in every model-matched comparison we could run. One frontier model refused that condition in 20 of 20 attempts while explicitly offering style imitation instead — provider policy postures now shape what imitation research can even measure, and we report that asymmetry as a finding.
 4. **Folk "AI tells" cannot tell novelists from machines.** We operationalized twelve popular tells — the em dash, "not X, but Y," rule-of-three triads, "delve," corporate jargon, hedging — and scored celebrated novelists against AI long-form fiction. The combined score is a coin flip (AUC ≈ 0.51). A threshold tuned to catch half the machine samples falsely flags half the novelist windows overall — including three-quarters of Morrison's and four-fifths of Ishiguro's and Pynchon's. Four tells run *backwards* — the novelists use more exclamation marks, superlatives, and hedges than the machines do. The em dash, the best single tell, turns out to be a model-family variable, not an AI constant. This one you can check today: the scorer and the aggregate data behind it are in [`tells/`](tells/) — score your own prose, or recompute our numbers from the bundled per-window rates.
 5. **Models are nobody's copy — and somebody anyway.** Unprompted model output lands outside every shelf author's envelope; it is, statistically, no one's prose. Yet the models identify as themselves at 97.8% (leave-one-out attribution over the same function-word features; chance is 12.5%). Each model is its own stable, identifiable voice that is not any human's voice.
@@ -33,15 +35,16 @@ The practical reading for writers follows from the layer split: the features the
 
 The findings survived a process I care about as much as the results:
 
-- **Self-commissioned adversarial review, twice.** I had the headline results red-teamed before any reviewer would see them. Two earlier headline claims turned out to be artifacts — one of length calibration, one of refusal composition. They were retracted and replaced with the corrected analysis, and the full adversarial record is committed verbatim alongside the paper.
+- **Self-commissioned adversarial review, three times.** I had the headline results red-teamed before any reviewer would see them. Across the three cycles, four headline claims turned out to be artifacts or overclaims — two in early drafts (length calibration; refusal composition), and two in a follow-on experiment whose significant-looking results (p = 0.011 / 0.021) were overturned by an independent six-lane review and retracted before anyone outside saw them. The full adversarial record, retractions included, is published deliberately: [author-manifold/docs/redteam](https://github.com/wbryanta/author-manifold/tree/main/docs/redteam).
 - **Validation gates with honest failures.** The measurement space had to pass a battery of pre-specified gates (separation, attribution, permutation nulls, length sensitivity, a same-author positive control). Where a strict gate failed, it is reported as a failure, not relabeled.
 - **Every claim evidence-traced.** Each result in the draft carries a pointer to a committed, machine-readable artifact; the numbers were frozen and audited against those artifacts before this preview was written.
 
 ## Status
 
-- **Paper:** drafted, post-audit, targeting **CHR 2027** (Computational Humanities Research).
-- **Companion repository:** a curated research release — the instrument, validation harness, public-domain replication shelf, and a CC0 corpus of ~1,000 AI-generated long-form samples across eight models and five prompting conditions — goes public with the preprint, expected summer 2026.
-- **This page** will link both the moment they're up. One piece is public already: the folk-tells scorer and its aggregate data, in [`tells/`](tells/).
+- **Paper:** published as a preprint, 2026-07-05 — [doi:10.5281/zenodo.21210011](https://doi.org/10.5281/zenodo.21210011) (v0.5.3, CC BY 4.0). Targeting **CHR 2027** (Computational Humanities Research).
+- **Companion repository:** public — [wbryanta/author-manifold](https://github.com/wbryanta/author-manifold): the instrument, validation harness, public-domain replication shelf, a CC0 corpus of 1,072 AI-generated long-form records across eight models and five prompting conditions, the recorded results behind every number, and all three adversarial-review cycles. Replicates from shipped data in ~30 minutes.
+- **Site:** [wbryanta.github.io](https://wbryanta.github.io) — essays, including the tells study told for humans.
+- **Here:** the folk-tells scorer and its aggregate data, in [`tells/`](tells/).
 
 ## Honest caveats
 
