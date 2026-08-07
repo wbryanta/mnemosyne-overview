@@ -21,6 +21,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import score_tells as st  # noqa: E402
+import sensitivity_variants as sv  # noqa: E402
 
 
 def count(tell_id, text):
@@ -201,6 +202,53 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("not_x_but_y", proc.stdout)
         self.assertIn("not a detector", proc.stdout)
+
+
+class TestSensitivityVariants(unittest.TestCase):
+    # The subset/pooling sensitivity table published in README.md is
+    # recomputed from the same bundled rows; these pin that it is a real
+    # check and not a printout.
+
+    def test_reproduce_exits_zero_against_bundled_json(self):
+        proc = subprocess.run(
+            [sys.executable, str(HERE / "sensitivity_variants.py"), "--reproduce"],
+            capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("RESULT: all", proc.stdout)
+        self.assertNotIn("\nFAIL", proc.stdout)
+
+    def test_reproduce_fails_on_tampered_rows(self):
+        import json
+        import tempfile
+        data = json.loads((HERE / "folk_tells_results.json").read_text(
+            encoding="utf-8"))
+        data["ai_sample_rows"][0]["em_dash"] += 5.0
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "tampered.json"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            proc = subprocess.run(
+                [sys.executable, str(HERE / "sensitivity_variants.py"),
+                 "--reproduce", "--data", str(path)],
+                capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("FAIL", proc.stdout)
+
+    def test_single_tell_z_sum_preserves_that_tells_auc(self):
+        # z-scoring one tell is monotone, so pooling a single tell must
+        # give exactly the AUC of its raw rates.
+        human = [{"em_dash": v} for v in (0.5, 1.0, 2.0, 4.0)]
+        ai = [{"em_dash": v} for v in (1.5, 3.0, 5.0, 6.0)]
+        hz, az = sv.z_sum(human, ai, ["em_dash"])
+        self.assertAlmostEqual(
+            st.mann_whitney_auc(az, hz),
+            st.mann_whitney_auc([r["em_dash"] for r in ai],
+                                [r["em_dash"] for r in human]),
+            places=12)
+
+    def test_forward_subset_is_the_twelve_minus_the_four_backwards(self):
+        self.assertEqual(len(sv.FORWARD_TELLS), 8)
+        self.assertEqual(sorted(sv.FORWARD_TELLS + sv.BACKWARDS_TELLS),
+                         sorted(st.TELL_IDS))
 
 
 if __name__ == "__main__":
