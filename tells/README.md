@@ -51,8 +51,11 @@ machines on exclamation marks, superlatives, hedges, and "Let's" openers
 (for "Let's" openers both medians are 0.00; the backwards call rests on
 the AUC, 0.446, whose cluster CI excludes 0.5).
 The best single tell, the em dash, has a cluster CI that crosses 0.5: it
-behaves as a model-family variable (some model families are em-dash-heavy,
-others use none), not an AI constant.
+behaves as a model-*specific* variable, not an AI constant. The spread is
+not between families but inside them — the bundled `per_model_medians`
+run from 2.57 to 7.01 per 1,000 words across models of one family, and
+one model uses no em dashes at all (median 0.00). Knowing which model
+wrote a text would help; knowing that a machine did tells you little.
 
 ## Score your own prose
 
