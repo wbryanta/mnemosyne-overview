@@ -57,6 +57,63 @@ run from 2.57 to 7.01 per 1,000 words across models of one family, and
 one model uses no em dashes at all (median 0.00). Knowing which model
 wrote a text would help; knowing that a machine did tells you little.
 
+## How much does the aggregation choice matter?
+
+A lot, and in both directions — so the whole sweep is published here
+rather than left for someone else to find. The headline combines all
+twelve tells in the folk direction with z-scores anchored on the human
+windows. Other poolings and other subsets of the same twelve counters,
+on the same rows:
+
+| Aggregation | AUC |
+|---|---|
+| all 12, human-anchored z-sum — **published** | 0.5058 |
+| all 12, pooled-anchored z-sum | 0.4510 |
+| all 12, rank-sum pooling | 0.4417 |
+| all 12, log1p rates, z-sum | 0.4572 |
+| 8 forward tells (drop the 4 that ran human-high) *oracle* | 0.6657 |
+| 8 forward tells, rank-sum pooling *oracle* | 0.6811 |
+| 8 forward tells, log1p rates, z-sum *oracle* | 0.6549 |
+| 3 headline tells: em dash / not-X-but-Y / tricolon *oracle* | 0.7056 |
+| named triple: em dash / not-X-but-Y / delve | 0.7275 |
+| best pair: em dash + not-X-but-Y *oracle* | 0.7343 |
+| em dash alone | 0.6804 |
+
+```
+python3 sensitivity_variants.py              # the table above
+python3 sensitivity_variants.py --reproduce  # verify it, exit nonzero on drift
+```
+
+Reading it honestly:
+
+- **Why the published number is the all-twelve sum.** The folk claim is
+  a *list* claim — these habits mark AI text — and the list is what gets
+  applied to an accused writer. Scoring the list as a list is the test of
+  the claim that was made. Every alternative pooling of all twelve
+  (pooled-anchored, rank-sum, log1p) lands at or below chance, 0.44–0.51.
+- ***oracle* means the subset needs the answer key.** "Drop the tells
+  that run backwards" and "keep the best pair" are choices you can only
+  make after seeing which documents are machine-written. A real accuser
+  has the circulating checklist, not the labels. Reported here because a
+  skeptic should be able to see the ceiling, not because it is a rule
+  anyone could have applied in advance.
+- **The strong tells were reported individually all along** — they are
+  the top rows of the table above, cluster CIs included, and the em
+  dash's CI [0.483, 0.849] crosses chance.
+- **0.73 is a real signal and still not an accusation.** Under the rule
+  an accuser actually applies — flag if *any* tell exceeds the novelist
+  95th percentile — the numbers are:
+
+| Tells used | AI flagged | Novelist windows flagged |
+|---|---|---|
+| all 12 | 52.8% | 34.9% |
+| 8 forward | 51.7% | 23.8% |
+| 3 headline | 44.2% | 12.8% |
+
+  One in eight celebrated-novelist windows fails the narrowest, most
+  favorable version of the test, and that version is the one no accuser
+  can construct without the labels.
+
 ## Score your own prose
 
 Pure Python standard library, 3.9+. No install, no dependencies:
@@ -148,14 +205,15 @@ python3 -m pytest test_score_tells.py    # if you have pytest
 python3 test_score_tells.py              # stdlib unittest fallback
 ```
 
-26 tests: the counter behaviors and documented exclusions, the
-AUC/threshold/percentile machinery, a check that `--reproduce` exits 0
-against the bundled JSON, and the text-scoring path.
+30 tests: the counter behaviors and documented exclusions, the
+AUC/threshold/percentile machinery, checks that both `--reproduce` paths
+exit 0 against the bundled JSON and fail on tampered rows, the pooling
+variants, and the text-scoring path.
 
 ## License
 
-Code (`score_tells.py`, `test_score_tells.py`): MIT, per the repository
-[LICENSE](../LICENSE).
+Code (`score_tells.py`, `sensitivity_variants.py`, `test_score_tells.py`):
+MIT, per the repository [LICENSE](../LICENSE).
 
 Data (`folk_tells_results.json`): dedicated to the public domain under
 [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — see

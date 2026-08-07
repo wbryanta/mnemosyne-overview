@@ -31,6 +31,25 @@ A paper — *The Width of a Voice: Placing Machine Imitation Inside Authors' Own
 
 The practical reading for writers follows from the layer split: the features the tell-lists name live in the texture layer — the layer that moves on request and that celebrated human prose occupies densely — so revising your prose to dodge them is sanding off craft to satisfy a checklist that can't tell Morrison from a machine. What actually carries authorship is the layer no checklist reaches, and the closer the final language is to literally yours, the more the result measures as yours.
 
+## What the folk-tells result is sensitive to
+
+Finding 4's headline number combines all twelve tells in the folk direction. That is the honest test of the folk claim — the claim on offer is that *all of these* indicate AI, and the circulating checklists are used as a list — but summing twelve counters is one of several defensible choices, and the choice moves the number a long way. So here is the whole sweep rather than the row that flatters the argument:
+
+| Aggregation of the twelve tells | AUC |
+|---|---|
+| All twelve, folk direction, human-anchored z-sum — **the published number** | 0.5058 |
+| All twelve, pooled-anchored z-sum | 0.4510 |
+| All twelve, rank-sum pooling | 0.4417 |
+| Eight forward tells (drop the four that ran human-high) | 0.6657 |
+| Three headline tells: em dash, "not X, but Y", tricolon | 0.7056 |
+| Named triple: em dash, "not X, but Y", "delve" | 0.7275 |
+| Best pair: em dash + "not X, but Y" | 0.7343 |
+| Em dash alone | 0.6804 |
+
+Two things to read off it. First, every subset that beats the coin flip is an **oracle** subset: you can only drop "the tells that run backwards" once you already know which documents are machine-written, which is precisely what an accuser does not know — they have the circulating list, and the circulating list is the first row. Second, the strong tells were never buried inside the combined score; they are reported individually in the per-tell table in [`tells/`](tells/), where the em dash's cluster-bootstrap CI [0.483, 0.849] crosses chance. A pair at 0.73 is a real signal and still not a usable accusation: under the rule an accuser actually applies — flag the document if *any* tell exceeds the novelist 95th percentile — the three headline tells flag 44.2% of the machine samples and 12.8% of the celebrated-novelist windows.
+
+Recompute all of it, including variants not shown here, with `python3 tells/sensitivity_variants.py`; `--reproduce` re-derives every figure above from the bundled rows and fails loudly on drift.
+
 ## How the work was tested
 
 The findings survived a process I care about as much as the results:
