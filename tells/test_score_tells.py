@@ -252,10 +252,12 @@ class TestSensitivityVariants(unittest.TestCase):
 
 
 class TestExhaustiveSweep(unittest.TestCase):
-    # The sweep is what turns "here are some subsets we tried" into "here
-    # is the ceiling". These pin that it is exhaustive, that its fast path
-    # agrees with the named-variant path, and that its maxima really do
-    # bound every named variant of the same pooling.
+    # The positive-direction sweep is what turns "here are some subsets we
+    # tried" into "here is the most the folk claim's own direction yields".
+    # These pin that it is exhaustive, that its fast path agrees with the
+    # named-variant path, and that its maxima really do bound every named
+    # variant of the same pooling. (It does not bound the signed rows --
+    # see TestSignedSweep.)
 
     @classmethod
     def setUpClass(cls):
@@ -293,23 +295,118 @@ class TestExhaustiveSweep(unittest.TestCase):
 
     def test_maxima_and_members_match_the_pinned_values(self):
         published = {key: value for key, _, value in sv.PUBLISHED_AUC}
-        for key, pooling in sv.EXHAUSTIVE_VARIANTS:
+        for key, pooling in sv.POSITIVE_SWEEP_VARIANTS:
             auc, members = sv.exhaustive_max(self.human, self.ai, pooling)
             self.assertAlmostEqual(auc, published[key], places=12)
-            self.assertEqual(members, sv.PUBLISHED_ORACLE_MEMBERS[key])
+            self.assertEqual(members, sv.PUBLISHED_POSITIVE_MEMBERS[key])
 
-    def test_oracle_maximum_bounds_every_named_variant_of_its_pooling(self):
+    def test_positive_maximum_bounds_every_positive_variant_of_its_pooling(self):
+        # Every named variant scores its tells in the folk direction, so the
+        # positive-direction maximum must bound them. It does NOT bound the
+        # signed rows -- that is the point of the signed sweep.
         published = {key: value for key, _, value in sv.PUBLISHED_AUC}
         bounded = {
-            "oracle_max_zsum": ["published", "forward8", "headline3", "pair2",
-                                "named3", "em_dash_alone"],
-            "oracle_max_ranksum": ["ranksum12", "ranksum8"],
-            "oracle_max_log1p": ["log1p12", "log1p8"],
+            "positive_max_zsum": ["published", "forward8", "headline3",
+                                  "pair2", "named3", "em_dash_alone"],
+            "positive_max_ranksum": ["ranksum12", "ranksum8"],
+            "positive_max_log1p": ["log1p12", "log1p8"],
         }
-        for oracle_key, keys in bounded.items():
+        for positive_key, keys in bounded.items():
             for key in keys:
-                self.assertLessEqual(published[key], published[oracle_key],
-                                     "{0} exceeds {1}".format(key, oracle_key))
+                self.assertLessEqual(
+                    published[key], published[positive_key],
+                    "{0} exceeds {1}".format(key, positive_key))
+
+
+class TestSignedSweep(unittest.TestCase):
+    # The signed sweep is the answer to "is 0.741 the ceiling?" -- it is
+    # not, and these pin both the answer and what it means. A negated
+    # coefficient scores a tell opposite to the folk claim, which makes the
+    # result a fitted classifier rather than the checklist.
+
+    @classmethod
+    def setUpClass(cls):
+        import json
+        data = json.loads((HERE / "folk_tells_results.json").read_text(
+            encoding="utf-8"))
+        cls.human = data["human_window_rows"]
+        cls.ai = data["ai_sample_rows"]
+
+    def test_coefficient_space_is_the_documented_size(self):
+        self.assertEqual(len(sv.SIGNED_COEFFICIENTS) ** len(st.TELL_IDS) - 1,
+                         531440)
+
+    def test_pinned_vectors_reproduce_their_pinned_aucs(self):
+        published = {key: value for key, _, value in sv.PUBLISHED_AUC}
+        for key, pooling in sv.SIGNED_VARIANTS:
+            components = sv.pooling_components(self.human, self.ai, pooling)
+            auc = sv.signed_auc(
+                components, sv.PUBLISHED_SIGNED_COEFFICIENTS[key])
+            self.assertAlmostEqual(auc, published[key], places=12)
+
+    def test_all_positive_vector_equals_the_subset_path(self):
+        # A +1-only vector is the same sum as the subset of those tells, so
+        # the two paths must agree bit for bit or the signed rows are not
+        # comparable to the positive ones.
+        coefficients = tuple(
+            1 if t in sv.HEADLINE_TELLS else 0 for t in st.TELL_IDS)
+        for pooling in ("zsum_human", "ranksum", "log1p_zsum"):
+            components = sv.pooling_components(self.human, self.ai, pooling)
+            self.assertEqual(sv.signed_auc(components, coefficients),
+                             sv.subset_auc(components, sv.HEADLINE_TELLS))
+
+    def test_negating_a_vector_inverts_its_auc(self):
+        # The antisymmetry the sweep relies on to score only half the space.
+        components = sv.pooling_components(self.human, self.ai, "zsum_human")
+        coefficients = sv.PUBLISHED_SIGNED_COEFFICIENTS["signed_max_zsum"]
+        negated = tuple(-c for c in coefficients)
+        self.assertAlmostEqual(
+            sv.signed_auc(components, coefficients)
+            + sv.signed_auc(components, negated), 1.0, places=12)
+
+    def test_signed_maximum_exceeds_the_positive_maximum(self):
+        published = {key: value for key, _, value in sv.PUBLISHED_AUC}
+        for key, _pooling in sv.SIGNED_VARIANTS:
+            positive_key = key.replace("signed_max", "positive_max")
+            self.assertGreater(published[key], published[positive_key])
+
+    def test_every_pinned_vector_negates_at_least_one_tell(self):
+        """If a maximizer were all-positive it would be a folk-direction
+        result, and the 'fitted classifier' framing would be wrong."""
+        for key, _pooling in sv.SIGNED_VARIANTS:
+            coefficients = sv.PUBLISHED_SIGNED_COEFFICIENTS[key]
+            self.assertTrue(any(c < 0 for c in coefficients), key)
+            negated = {t for c, t in zip(coefficients, st.TELL_IDS) if c < 0}
+            # Every negated tell is one this project publishes as backwards,
+            # except delve_leverage, which is near-chance in both directions.
+            self.assertTrue(
+                negated <= set(sv.BACKWARDS_TELLS) | {"delve_leverage"},
+                "{0} negates {1}".format(key, sorted(negated)))
+
+    def test_enumerator_is_exhaustive_on_a_reduced_space(self):
+        """The full sweep is 531,440 vectors; this proves the enumerator on
+        a space small enough to check by brute force (3^4 - 1 = 80)."""
+        import itertools
+        import math
+        tells = list(st.TELL_IDS[:4])
+        components = sv.pooling_components(self.human, self.ai, "zsum_human")
+
+        def auc_of(vector):
+            padded = tuple(vector) + (0,) * (len(st.TELL_IDS) - len(tells))
+            return sv.signed_auc(components, padded)
+
+        seen = [v for v in itertools.product(sv.SIGNED_COEFFICIENTS,
+                                             repeat=len(tells)) if any(v)]
+        self.assertEqual(len(seen), 3 ** len(tells) - 1)
+        brute_force = max(auc_of(v) for v in seen)
+        # The canonical-half walk the real sweep uses must find the same max.
+        best = -1.0
+        for vector in seen:
+            if next((c for c in vector if c), 0) != 1:
+                continue
+            auc = auc_of(vector)
+            best = max(best, auc, 1.0 - auc)
+        self.assertTrue(math.isclose(best, brute_force, rel_tol=0, abs_tol=1e-12))
 
 
 class TestOracleClassification(unittest.TestCase):
@@ -321,14 +418,23 @@ class TestOracleClassification(unittest.TestCase):
 
     def test_label_free_variants_are_exactly_the_three_documented_ones(self):
         all_twelve = ("published", "pooled12", "ranksum12", "log1p12")
+        signed = {key for key, _ in sv.SIGNED_VARIANTS}
         label_free = {key for key, label, _ in sv.PUBLISHED_AUC
-                      if "*oracle*" not in label and key not in all_twelve}
+                      if "*oracle*" not in label
+                      and key not in all_twelve
+                      and key not in signed}
         self.assertEqual(label_free, {"headline3", "named3", "em_dash_alone"})
 
-    def test_every_exhaustive_variant_is_marked_oracle(self):
+    def test_every_positive_sweep_variant_is_marked_oracle(self):
         labels = {key: label for key, label, _ in sv.PUBLISHED_AUC}
-        for key, _pooling in sv.EXHAUSTIVE_VARIANTS:
+        for key, _pooling in sv.POSITIVE_SWEEP_VARIANTS:
             self.assertIn("*oracle*", labels[key])
+
+    def test_every_signed_variant_is_labelled_as_fitted(self):
+        """The signed rows must never read as the folk checklist."""
+        labels = {key: label for key, label, _ in sv.PUBLISHED_AUC}
+        for key, _pooling in sv.SIGNED_VARIANTS:
+            self.assertIn("fitted, not the list", labels[key])
 
     def test_headline_triple_is_the_readmes_first_three_tells(self):
         # The provenance claim, checked against the shipped README rather

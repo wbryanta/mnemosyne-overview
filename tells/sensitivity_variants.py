@@ -9,38 +9,64 @@ offer is that *all of these* tells indicate AI. But it is one of several
 defensible ways to pool twelve counters, and the choice moves the number
 a lot. Rather than leave that for someone else to discover, this script
 recomputes the combined AUC from the same bundled rows that
-`score_tells.py --reproduce` verifies: a table of named variants, plus an
-EXHAUSTIVE sweep of all 4,095 nonempty subsets of the twelve tells under
-each of the three pooling rules, so the true ceiling is measured rather
-than guessed at from a hand-picked list.
+`score_tells.py --reproduce` verifies: a table of named variants, plus two
+EXHAUSTIVE sweeps.
 
-What the sweep shows: the best subset any pooling can reach is AUC 0.741
-(human-anchored z-sum; 0.729 rank-sum, 0.730 log1p — all three maximized
-by the same triple, em dash + not-X-but-Y + staging adverbs). That is an
-ORACLE number: the maximizing subset is identifiable only by someone who
-already holds the labels, and it is reported here as the ceiling a
-skeptic should be able to see, not as a rule anyone could apply. Three
-variants below are marked oracle-FREE, because their subsets were nameable
-in advance and they still beat chance: the em dash alone, the three tells
-this project's own repository description used to name, and the three
-tells this project's own frozen README highlights first. Those reach
-0.71-0.73 — close to the oracle ceiling, which is the honest
-counter-argument to the headline and is why they are printed in the same
-table. What they support is that the list is a coin flip and its best
-member is a weak, model-specific signal — the em dash's cluster CI
-crosses chance, and its per-model medians run 0.00-7.01. Both are
-reported per-tell in README.md.
+The POSITIVE-DIRECTION sweep keeps the folk claim's own sign — every tell
+counted as AI-high — and varies only which tells are included: all 4,095
+nonempty subsets, under each of the three pooling rules. Its maximum is
+AUC 0.741 (human-anchored z-sum; 0.729 rank-sum, 0.730 log1p, all three
+maximized by the same triple: em dash + not-X-but-Y + staging adverbs).
+That is an ORACLE number — the maximizing subset is identifiable only by
+someone who already holds the labels. It is the most the folk claim's own
+direction can be made to yield on this data. It is NOT a ceiling on what
+these twelve counters can do, and is not described as one.
+
+The SIGNED sweep drops the folk claim's sign, letting each tell enter at
+-1, 0 or +1: 531,440 coefficient vectors. It reaches 0.840 (z-sum; 0.880
+rank-sum, 0.855 log1p) — higher, and measuring something else. A
+combination that NEGATES tells is not the checklist being tested; it is a
+small linear classifier over the twelve counters, fitted to these labels,
+and it says "FEW exclamation marks, FEW superlatives, FEW hedges" exactly
+where the circulating list says the opposite. That such a thing exists is
+not news and not a refutation of the headline: the paper reports that full
+stylometric feature sets separate unedited machine fiction near ceiling
+(citing Russell et al. at 99.8% accuracy for a character-n-gram/POS
+baseline), so a fitted 12-counter classifier landing between 0.506 and
+that is the expected place for it. The tells it negates are the four the
+paper itself publishes as running backwards, so the sign information being
+fitted here is the paper's own, handed back to it.
+
+Three variants below are marked oracle-FREE, because their subsets were
+nameable in advance and they still beat chance: the em dash alone, the
+three tells this project's own repository description used to name, and
+the three tells this project's own frozen README highlights first. Those
+reach 0.71-0.73, which is the honest counter-argument to the headline and
+is why they are printed in the same table. What they support is that the
+list is a coin flip and its best member is a weak, model-specific
+signal — the em dash's cluster CI crosses chance, and its per-model
+medians run 0.00-7.01. Both are reported per-tell in README.md.
 
   python3 sensitivity_variants.py
-      Print the variant table, the exhaustive-sweep maxima, and the
-      accuser's-rule table.
+      Print the variant table, both sweeps' maxima, and the accuser's-rule
+      table. ~6 s: the positive-direction sweep is recomputed live, the
+      signed maxima are verified from their pinned coefficient vectors.
 
   python3 sensitivity_variants.py --reproduce
-      Recompute every variant and the exhaustive maxima, verify them
-      against this module's pinned values, and verify that the tables
-      published in README.md and ../README.md render those same values.
-      PASS/FAIL per check, nonzero exit on any mismatch (tolerance 1e-9;
-      the READMEs are compared at their published precision).
+      Recompute every variant and the positive-direction maxima, verify
+      the pinned signed maxima reproduce from their coefficient vectors,
+      and verify that the tables published in README.md and ../README.md
+      render those same values. PASS/FAIL per check, nonzero exit on any
+      mismatch (tolerance 1e-9; the READMEs are compared at their
+      published precision).
+
+  python3 sensitivity_variants.py --signed-sweep
+      Re-derive the signed maxima from scratch by enumerating all 531,440
+      coefficient vectors per pooling. Exact, and slow in pure Python:
+      measured 169 s / 146 s / 170 s, so ~8 minutes in total. The default
+      paths score the pinned coefficient vectors instead, which is why
+      they stay fast; this is the command that proves the pins are the
+      argmax rather than merely consistent.
 
 Pure Python standard library (3.9+), like `score_tells.py`, whose
 counters and statistics this reuses.
@@ -60,6 +86,7 @@ import json
 import math
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -84,21 +111,46 @@ BEST_PAIR = ["em_dash", "not_x_but_y"]
 # The three tells the project's own GitHub description used to name.
 NAMED_TRIPLE = ["em_dash", "not_x_but_y", "delve_leverage"]
 
-# The exhaustive sweep: (variant key, pooling rule). Each variant reports
-# the best AUC reachable by ANY of the 4,095 nonempty subsets of the twelve
-# tells under that pooling.
-EXHAUSTIVE_VARIANTS: Tuple[Tuple[str, str], ...] = (
-    ("oracle_max_zsum", "zsum_human"),
-    ("oracle_max_ranksum", "ranksum"),
-    ("oracle_max_log1p", "log1p_zsum"),
+# The POSITIVE-DIRECTION sweep: (variant key, pooling rule). Each variant
+# reports the best AUC reachable by ANY of the 4,095 nonempty subsets of
+# the twelve tells under that pooling, with every tell entering in the folk
+# claim's own direction (AI-high). This is a maximum over the folk claim's
+# sign, not over what the counters can do -- see SIGNED_VARIANTS.
+POSITIVE_SWEEP_VARIANTS: Tuple[Tuple[str, str], ...] = (
+    ("positive_max_zsum", "zsum_human"),
+    ("positive_max_ranksum", "ranksum"),
+    ("positive_max_log1p", "log1p_zsum"),
 )
 
 # The maximizing subset, pinned. All three poolings are maximized by the
 # same triple; --reproduce fails if a recomputation lands anywhere else.
-PUBLISHED_ORACLE_MEMBERS: Dict[str, Tuple[str, ...]] = {
-    "oracle_max_zsum": ("em_dash", "not_x_but_y", "staging_adverbs"),
-    "oracle_max_ranksum": ("em_dash", "not_x_but_y", "staging_adverbs"),
-    "oracle_max_log1p": ("em_dash", "not_x_but_y", "staging_adverbs"),
+PUBLISHED_POSITIVE_MEMBERS: Dict[str, Tuple[str, ...]] = {
+    "positive_max_zsum": ("em_dash", "not_x_but_y", "staging_adverbs"),
+    "positive_max_ranksum": ("em_dash", "not_x_but_y", "staging_adverbs"),
+    "positive_max_log1p": ("em_dash", "not_x_but_y", "staging_adverbs"),
+}
+
+# The SIGNED sweep: same poolings, but each tell may enter at -1, 0 or +1.
+# 3^12 - 1 = 531,440 nonzero coefficient vectors. A vector with a negative
+# coefficient is no longer scoring the folk claim -- it is a fitted linear
+# classifier over the counters, and is labelled as one everywhere it is
+# reported.
+SIGNED_COEFFICIENTS = (0, 1, -1)
+SIGNED_VARIANTS: Tuple[Tuple[str, str], ...] = (
+    ("signed_max_zsum", "zsum_human"),
+    ("signed_max_ranksum", "ranksum"),
+    ("signed_max_log1p", "log1p_zsum"),
+)
+
+# The maximizing coefficient vector per pooling, aligned to
+# score_tells.TELL_IDS. Re-derive with --signed-sweep (~3 min per pooling);
+# the default paths verify that these vectors reproduce their pinned AUCs,
+# which is instant, rather than re-running the enumeration.
+PUBLISHED_SIGNED_COEFFICIENTS: Dict[str, Tuple[int, ...]] = {
+    #                     em  nxb  tri  exc  let  sup  del  cor  hed  sta  con  unn
+    "signed_max_zsum":    (1,  1,   0,  -1,  -1,  -1,   0,   0,  -1,   1,   0,   0),
+    "signed_max_ranksum": (1,  1,   0,  -1,  -1,  -1,  -1,   0,   0,   0,   0,   0),
+    "signed_max_log1p":   (1,  0,   0,  -1,  -1,  -1,   0,   0,   0,   0,   0,   0),
 }
 
 
@@ -204,13 +256,17 @@ def subset_auc(components: Dict[str, Tuple[List[float], List[float]]],
 
 def exhaustive_max(human_rows: List[dict], ai_rows: List[dict],
                    pooling: str) -> Tuple[float, Tuple[str, ...]]:
-    """Best AUC over ALL 4,095 nonempty subsets of the twelve tells.
+    """Best AUC over ALL 4,095 nonempty subsets, folk direction only.
 
-    This is the oracle ceiling: the returned subset is the one a scorer
-    who already knows which documents are machine-written would choose,
-    which is exactly why no accuser can choose it. Ties are broken toward
-    the smaller subset, then toward the order of score_tells.TELL_IDS, so
-    the answer is deterministic.
+    Every tell enters AI-high, as the folk claim states it; only
+    membership varies. The returned subset is the one a scorer who already
+    knows which documents are machine-written would choose, which is
+    exactly why no accuser can choose it.
+
+    This is the maximum of the folk claim's own direction. It is not the
+    most these counters can do -- signed_max() answers that, and answers
+    much higher. Ties are broken toward the smaller subset, then toward
+    the order of score_tells.TELL_IDS, so the answer is deterministic.
     """
     components = pooling_components(human_rows, ai_rows, pooling)
     best_auc, best_tells = -1.0, ()
@@ -220,6 +276,65 @@ def exhaustive_max(human_rows: List[dict], ai_rows: List[dict],
             if auc > best_auc:
                 best_auc, best_tells = auc, combo
     return best_auc, best_tells
+
+
+def signed_auc(components: Dict[str, Tuple[List[float], List[float]]],
+               coefficients: Sequence[int]) -> float:
+    """AUC of one signed coefficient vector, aligned to st.TELL_IDS.
+
+    Summed with math.fsum over the active terms, exactly as the subset
+    path sums its members, so an all-+1 vector reproduces that subset's
+    AUC bit for bit.
+    """
+    active = [(float(c), components[t])
+              for c, t in zip(coefficients, st.TELL_IDS) if c]
+    if not active:
+        raise ValueError("the all-zero coefficient vector has no score")
+    human = [math.fsum(c * comp[0][i] for c, comp in active)
+             for i in range(len(active[0][1][0]))]
+    ai = [math.fsum(c * comp[1][i] for c, comp in active)
+          for i in range(len(active[0][1][1]))]
+    return st.mann_whitney_auc(ai, human)
+
+
+def signed_max(human_rows: List[dict], ai_rows: List[dict],
+               pooling: str) -> Tuple[float, Tuple[int, ...]]:
+    """Best AUC over every signed coefficient vector in {-1, 0, +1}^12.
+
+    Exhaustive over all 3^12 - 1 = 531,440 nonzero vectors, but only half
+    are scored: negating a vector negates every score, which inverts the
+    AUC exactly (AUC(-c) = 1 - AUC(c), ties included), so each canonical
+    vector -- first nonzero coefficient +1 -- settles its own negation too.
+
+    Slow on purpose rather than approximate: ~3 minutes per pooling in
+    pure Python. The published values are pinned in
+    PUBLISHED_SIGNED_COEFFICIENTS; this is what re-derives them.
+
+    What it measures is NOT the folk checklist. Any vector with a negative
+    coefficient scores a tell in the opposite direction to the claim under
+    test, which makes it a fitted linear classifier over the counters.
+    """
+    components = pooling_components(human_rows, ai_rows, pooling)
+    best_auc, best_coefficients = -1.0, ()
+    for coefficients in itertools.product(
+            SIGNED_COEFFICIENTS, repeat=len(st.TELL_IDS)):
+        first = next((c for c in coefficients if c), 0)
+        if first != 1:            # skip the all-zero vector and each
+            continue              # negated twin, both settled elsewhere
+        auc = signed_auc(components, coefficients)
+        if auc > best_auc:
+            best_auc, best_coefficients = auc, coefficients
+        if 1.0 - auc > best_auc:
+            best_auc = 1.0 - auc
+            best_coefficients = tuple(-c for c in coefficients)
+    return best_auc, best_coefficients
+
+
+def format_coefficients(coefficients: Sequence[int]) -> str:
+    """'+em_dash -exclamation ...' for the nonzero terms, in TELL_IDS order."""
+    return " ".join(
+        "{0}{1}".format("+" if c > 0 else "-", tell)
+        for c, tell in zip(coefficients, st.TELL_IDS) if c)
 
 
 def any_tell_over_p95(human_rows: List[dict], ai_rows: List[dict],
@@ -261,15 +376,24 @@ PUBLISHED_AUC: List[Tuple[str, str, float]] = [
      0.4571666666666667),
     ("log1p8", "8 forward tells, log1p rates, z-sum   *oracle*",
      0.6549006410256410),
-    ("oracle_max_zsum",
-     "exhaustive maximum over all 4,095 subsets, z-sum   *oracle*",
+    ("positive_max_zsum",
+     "positive-direction maximum over all 4,095 subsets, z-sum   *oracle*",
      0.7408750000000000),
-    ("oracle_max_ranksum",
-     "exhaustive maximum over all 4,095 subsets, rank-sum   *oracle*",
+    ("positive_max_ranksum",
+     "positive-direction maximum over all 4,095 subsets, rank-sum   *oracle*",
      0.7285448717948718),
-    ("oracle_max_log1p",
-     "exhaustive maximum over all 4,095 subsets, log1p z-sum   *oracle*",
+    ("positive_max_log1p",
+     "positive-direction maximum over all 4,095 subsets, log1p   *oracle*",
      0.7300352564102565),
+    ("signed_max_zsum",
+     "signed maximum over all 531,440 vectors, z-sum   *fitted, not the list*",
+     0.8402564102564103),
+    ("signed_max_ranksum",
+     "signed maximum over all 531,440 vectors, rank-sum   *fitted, not the list*",
+     0.8795961538461539),
+    ("signed_max_log1p",
+     "signed maximum over all 531,440 vectors, log1p   *fitted, not the list*",
+     0.8545224358974359),
 ]
 
 # (key, label, published AI flagged share, published human flagged share)
@@ -312,9 +436,16 @@ def compute(data: dict) -> Tuple[Dict[str, float],
         "log1p8": auc_of(z_sum(human_log, ai_log, FORWARD_TELLS)),
     }
     oracle_members: Dict[str, Tuple[str, ...]] = {}
-    for key, pooling in EXHAUSTIVE_VARIANTS:
+    for key, pooling in POSITIVE_SWEEP_VARIANTS:
         auc[key], oracle_members[key] = exhaustive_max(
             human_rows, ai_rows, pooling)
+    # The signed maxima are scored from their pinned coefficient vectors,
+    # not re-derived: the enumeration behind them is ~3 min per pooling and
+    # runs under --signed-sweep. Scoring the pinned vector still fails
+    # loudly if the rows or the pooling change underneath it.
+    for key, pooling in SIGNED_VARIANTS:
+        components = pooling_components(human_rows, ai_rows, pooling)
+        auc[key] = signed_auc(components, PUBLISHED_SIGNED_COEFFICIENTS[key])
     any_rule = {
         "any12": any_tell_over_p95(human_rows, ai_rows, st.TELL_IDS),
         "any8": any_tell_over_p95(human_rows, ai_rows, FORWARD_TELLS),
@@ -334,8 +465,13 @@ def render(auc: Dict[str, float],
         "*oracle* = the subset can only be chosen by someone who already knows",
         "which documents are AI; an accuser with the circulating list cannot.",
         "Unmarked subsets could be chosen in advance, without the labels.",
-        "The last three rows are the exhaustive ceiling: the best of ALL 4,095",
-        "nonempty subsets of the twelve tells, per pooling.",
+        "",
+        "The positive-direction rows are the best of ALL 4,095 nonempty subsets",
+        "with every tell scored AI-high, as the folk claim states it. The signed",
+        "rows relax that: each tell may enter at -1, 0 or +1 (531,440 vectors).",
+        "A negated tell scores the OPPOSITE of the claim under test, so those",
+        "rows are a fitted linear classifier over the counters, not the",
+        "checklist -- see the note under the table.",
         "",
         "  {0}  {1:>7}".format("variant".ljust(width), "AUC"),
         "  {0}  {1}".format("-" * width, "-" * 7),
@@ -344,12 +480,35 @@ def render(auc: Dict[str, float],
         lines.append("  {0}  {1:>7.4f}".format(label.ljust(width), auc[key]))
     lines += [
         "",
-        "Maximizing subset per pooling (the subset the oracle rows use):",
+        "Maximizing subset per pooling (positive-direction rows):",
     ]
-    for key, _pooling in EXHAUSTIVE_VARIANTS:
+    for key, _pooling in POSITIVE_SWEEP_VARIANTS:
         lines.append("  {0}  {1}".format(
-            key.ljust(20), " + ".join(oracle_members[key])))
+            key.ljust(22), " + ".join(oracle_members[key])))
     lines += [
+        "",
+        "Maximizing coefficient vector per pooling (signed rows):",
+    ]
+    for key, _pooling in SIGNED_VARIANTS:
+        lines.append("  {0}  {1}".format(
+            key.ljust(22),
+            format_coefficients(PUBLISHED_SIGNED_COEFFICIENTS[key])))
+    lines += [
+        "",
+        "What the signed rows are, and are not. They negate tells the folk",
+        "claim says indicate AI -- reading FEW exclamation marks, FEW",
+        "superlatives and FEW hedges as machine-like, the opposite of the",
+        "circulating list. That is a small linear classifier over the twelve",
+        "counters, fitted to these labels; it is not the checklist, and it is",
+        "not evidence against the published 0.506, which scores the list as",
+        "the list. Almost every negated tell is one this project already",
+        "publishes as running backwards, so the signs being fitted are its",
+        "own; the one exception is delve_leverage in the rank-sum vector, a",
+        "tell that is near-chance in both directions (AUC 0.496). For scale,",
+        "the paper cites a character-n-gram/POS baseline at 99.8% accuracy",
+        "(Russell et al.): a fitted 12-counter classifier at 0.84-0.88 sits",
+        "between the checklist and real stylometry, which is where it should",
+        "sit.",
         "",
         "Provenance of the three unmarked multi-tell rows: 'em dash alone' is",
         "the most famous tell there is; 'named triple' is the set this",
@@ -404,12 +563,18 @@ README_AUC_ROWS: List[Tuple[Path, Dict[str, str]]] = [
         "named3": r"named triple",
         "pair2": r"best pair",
         "em_dash_alone": r"em dash alone",
-        "oracle_max_zsum":
-            r"exhaustive maximum over all 4,095 subsets, z-sum",
-        "oracle_max_ranksum":
-            r"exhaustive maximum over all 4,095 subsets, rank-sum",
-        "oracle_max_log1p":
-            r"exhaustive maximum over all 4,095 subsets, log1p",
+        "positive_max_zsum":
+            r"positive-direction maximum over all 4,095 subsets, z-sum",
+        "positive_max_ranksum":
+            r"positive-direction maximum over all 4,095 subsets, rank-sum",
+        "positive_max_log1p":
+            r"positive-direction maximum over all 4,095 subsets, log1p",
+        "signed_max_zsum":
+            r"signed maximum over all 531,440 vectors, z-sum",
+        "signed_max_ranksum":
+            r"signed maximum over all 531,440 vectors, rank-sum",
+        "signed_max_log1p":
+            r"signed maximum over all 531,440 vectors, log1p",
     }),
     (ROOT_README, {
         "published": r"human-anchored z-sum",
@@ -420,12 +585,18 @@ README_AUC_ROWS: List[Tuple[Path, Dict[str, str]]] = [
         "named3": r"named triple",
         "pair2": r"best pair",
         "em_dash_alone": r"em dash alone",
-        "oracle_max_zsum":
-            r"exhaustive maximum over all 4,095 subsets \(z-sum\)",
-        "oracle_max_ranksum":
-            r"exhaustive maximum over all 4,095 subsets \(rank-sum\)",
-        "oracle_max_log1p":
-            r"exhaustive maximum over all 4,095 subsets \(log1p",
+        "positive_max_zsum":
+            r"positive-direction maximum over all 4,095 subsets \(z-sum\)",
+        "positive_max_ranksum":
+            r"positive-direction maximum over all 4,095 subsets \(rank-sum\)",
+        "positive_max_log1p":
+            r"positive-direction maximum over all 4,095 subsets \(log1p",
+        "signed_max_zsum":
+            r"signed maximum over all 531,440 vectors \(z-sum\)",
+        "signed_max_ranksum":
+            r"signed maximum over all 531,440 vectors \(rank-sum\)",
+        "signed_max_log1p":
+            r"signed maximum over all 531,440 vectors \(log1p",
     }),
 ]
 
@@ -575,14 +746,22 @@ def reproduce(auc: Dict[str, float],
     for key, label, want in PUBLISHED_AUC:
         check("auc[{0}]  {1}".format(key, label.replace("  *oracle*", "")),
               auc[key], want)
-    for key, _pooling in EXHAUSTIVE_VARIANTS:
-        want_members = PUBLISHED_ORACLE_MEMBERS[key]
+    for key, _pooling in POSITIVE_SWEEP_VARIANTS:
+        want_members = PUBLISHED_POSITIVE_MEMBERS[key]
         got_members = oracle_members[key]
         record(got_members == want_members,
                "maximizing subset[{0}]  {1}".format(
                    key, " + ".join(want_members)),
                "\n      recomputed={0!r}\n      published= {1!r}".format(
                    got_members, want_members))
+    for key, _pooling in SIGNED_VARIANTS:
+        # The AUC of the pinned vector is checked above, with the rest of
+        # PUBLISHED_AUC. What is checked here is that it really does beat
+        # the folk direction's own maximum -- the reason the row exists.
+        positive_key = key.replace("signed_max", "positive_max")
+        record(auc[key] > auc[positive_key],
+               "signed[{0}] exceeds {1}  ({2:.4f} > {3:.4f})".format(
+                   key, positive_key, auc[key], auc[positive_key]))
     for key, label, want_ai, want_human in PUBLISHED_ANY_RULE:
         check("any_tell>p95[{0}]: AI flagged".format(key),
               any_rule[key][0], want_ai)
@@ -603,6 +782,48 @@ def reproduce(auc: Dict[str, float],
     return 0
 
 
+def signed_sweep(data: dict) -> int:
+    """Re-derive the signed maxima from scratch and check the pins."""
+    human_rows = data["human_window_rows"]
+    ai_rows = data["ai_sample_rows"]
+    total = len(SIGNED_COEFFICIENTS) ** len(st.TELL_IDS) - 1
+    print("Enumerating all {0:,} nonzero coefficient vectors in {1} per "
+          "pooling.".format(total, set(SIGNED_COEFFICIENTS)))
+    print("Half are scored directly; each settles its own negation by "
+          "AUC(-c) = 1 - AUC(c).")
+    print("Slow by design (~3 min per pooling, ~8 min in total; pure "
+          "Python).")
+    print()
+    n_fail = 0
+    for key, pooling in SIGNED_VARIANTS:
+        # Flushed so a redirected run reports each pooling as it lands
+        # rather than nothing for six minutes.
+        print("...enumerating {0}".format(key), flush=True)
+        started = time.monotonic()
+        auc, coefficients = signed_max(human_rows, ai_rows, pooling)
+        elapsed = time.monotonic() - started
+        want_auc = {k: v for k, _, v in PUBLISHED_AUC}[key]
+        want_coefficients = PUBLISHED_SIGNED_COEFFICIENTS[key]
+        ok = (abs(auc - want_auc) <= 1e-9
+              and tuple(coefficients) == want_coefficients)
+        n_fail += 0 if ok else 1
+        print("{0}  {1}".format("PASS " if ok else "FAIL ", key))
+        print("      recomputed {0!r}".format(auc))
+        print("      published  {0!r}".format(want_auc))
+        print("      vector     {0}".format(format_coefficients(coefficients)))
+        if not ok:
+            print("      PINNED     {0}".format(
+                format_coefficients(want_coefficients)))
+        print("      {0:.1f} s".format(elapsed), flush=True)
+    print()
+    if n_fail:
+        print("RESULT: {0} signed maxima FAIL their pins".format(n_fail))
+        return 1
+    print("RESULT: all {0} signed maxima reproduce their pinned values "
+          "and vectors".format(len(SIGNED_VARIANTS)))
+    return 0
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description="Recompute the folk-tells combined score under the named "
@@ -612,6 +833,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                         help="verify the recomputation against this module's "
                              "pinned values and against the tables published "
                              "in both READMEs; nonzero exit on mismatch")
+    parser.add_argument("--signed-sweep", action="store_true",
+                        help="re-derive the signed maxima by enumerating all "
+                             "531,440 coefficient vectors per pooling "
+                             "(exact; ~3 minutes per pooling, ~8 in total)")
     parser.add_argument("--data", type=Path, default=DATA_FILE,
                         help="path to folk_tells_results.json "
                              "(default: alongside this script)")
@@ -631,6 +856,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("error: malformed JSON in {0}: {1}".format(args.data, e),
               file=sys.stderr)
         return 2
+
+    if args.signed_sweep:
+        return signed_sweep(data)
 
     auc, any_rule, oracle_members = compute(data)
     if args.reproduce:

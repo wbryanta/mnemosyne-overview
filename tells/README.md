@@ -61,12 +61,15 @@ wrote a text would help; knowing that a machine did tells you little.
 ## How much does the aggregation choice matter?
 
 A lot, and in both directions — so it is published here rather than left
-for someone else to find, and the ceiling is *measured* rather than
+for someone else to find, and the maxima are *measured* rather than
 guessed at from a hand-picked list. The headline combines all twelve
 tells in the folk direction with z-scores anchored on the human windows.
-Below: other poolings and other subsets of the same twelve counters, on
-the same rows, and then the exhaustive maximum over **all 4,095 nonempty
-subsets** of the twelve tells under each pooling.
+Below: other poolings and other subsets of the same twelve counters on
+the same rows; then the **positive-direction maximum** over all 4,095
+nonempty subsets, with every tell scored AI-high as the folk claim states
+it; then the **signed maximum**, which lets each tell enter at −1, 0 or +1
+across all 531,440 coefficient vectors. Those last three rows are a
+different kind of object, and the note under the table says why.
 
 | Aggregation | AUC |
 |---|---|
@@ -81,30 +84,62 @@ subsets** of the twelve tells under each pooling.
 | named triple: em dash / not-X-but-Y / delve | 0.7275 |
 | best pair: em dash + not-X-but-Y *oracle* | 0.7343 |
 | em dash alone | 0.6804 |
-| exhaustive maximum over all 4,095 subsets, z-sum *oracle* | 0.7409 |
-| exhaustive maximum over all 4,095 subsets, rank-sum *oracle* | 0.7285 |
-| exhaustive maximum over all 4,095 subsets, log1p z-sum *oracle* | 0.7300 |
+| positive-direction maximum over all 4,095 subsets, z-sum *oracle* | 0.7409 |
+| positive-direction maximum over all 4,095 subsets, rank-sum *oracle* | 0.7285 |
+| positive-direction maximum over all 4,095 subsets, log1p *oracle* | 0.7300 |
+| signed maximum over all 531,440 vectors, z-sum *fitted* | 0.8403 |
+| signed maximum over all 531,440 vectors, rank-sum *fitted* | 0.8796 |
+| signed maximum over all 531,440 vectors, log1p *fitted* | 0.8545 |
 
-All three exhaustive maxima are reached by the *same* three tells — em
-dash + "not X, but Y" + staging adverbs — which is not a subset any
-circulating checklist names, and not one anybody can identify without the
-answer key.
+All three positive-direction maxima are reached by the *same* three
+tells — em dash + "not X, but Y" + staging adverbs — which is not a subset
+any circulating checklist names, and not one anybody can identify without
+the answer key.
 
-So the three numbers to hold onto: the **oracle ceiling is 0.741**, and
-it takes label knowledge to reach; **label-free constructions reach
-0.71–0.73** (the named triple 0.7275, the headline triple 0.7056; the em
-dash alone 0.6804); and the **published all-twelve folk-direction sum is
-0.5058**, a coin flip. The gap between the first two is small, which is
-the honest reading: an accuser who guesses well is not far off the best
-that could be done with these counters — and the best that could be done
-with these counters is still not an accusation (see the last bullet
-below).
+**The signed rows are not the checklist, and 0.741 is not a ceiling.**
+A signed combination is allowed to *negate* a tell — to read FEW
+exclamation marks, FEW superlatives and FEW hedges as machine-like, which
+is the opposite of what the circulating list says. That is a small linear
+classifier over the twelve counters, fitted to these labels; it is no
+longer the folk claim under test. The maximizing vectors are:
+
+| Pooling | Maximizing coefficient vector |
+|---|---|
+| z-sum | +em_dash +not_x_but_y +staging_adverbs −exclamation −lets_opener −superlative −hedges |
+| rank-sum | +em_dash +not_x_but_y −exclamation −lets_opener −superlative −delve_leverage |
+| log1p | +em_dash −exclamation −lets_opener −superlative |
+
+Every negated tell but one is a tell this study already publishes as
+running *backwards* (the exception is `delve_leverage` in the rank-sum
+vector, which is near-chance in both directions at AUC 0.496) — so the
+sign information being fitted here is this study's own, handed back to
+it. That such a classifier exists is not news and not a counterexample to
+the headline: the paper reports that full stylometric feature sets
+separate unedited machine fiction near ceiling, citing Russell et al. at
+99.8% accuracy for a character-n-gram/POS baseline. A fitted 12-counter
+classifier at 0.84–0.88 sits between the circulating checklist and real
+stylometry, which is exactly where it should sit. The claim this study
+makes — and the number to hold onto — is about the list scored *as the
+list*: **0.5058**, a coin flip.
+
+So, in order: the **published all-twelve folk-direction sum is 0.5058**;
+the most the folk claim's own direction can be made to yield, with label
+knowledge, is **0.741**; **label-free constructions reach 0.71–0.73** (the
+named triple 0.7275, the headline triple 0.7056; the em dash alone
+0.6804); and a **fitted signed classifier over the same counters reaches
+0.84–0.88**, which is a different claim about a different object.
 
 ```
-python3 sensitivity_variants.py              # the table above (~6 s: the
-                                             # exhaustive sweep is 3 × 4,095
-                                             # subsets, scored from the rows)
-python3 sensitivity_variants.py --reproduce  # verify it, exit nonzero on drift
+python3 sensitivity_variants.py                # the table above (~6 s: the
+                                               # positive sweep is 3 × 4,095
+                                               # subsets, scored from the rows;
+                                               # the signed rows are scored from
+                                               # their pinned vectors)
+python3 sensitivity_variants.py --reproduce    # verify it, exit nonzero on drift
+python3 sensitivity_variants.py --signed-sweep # re-derive the signed maxima by
+                                               # enumerating all 531,440 vectors
+                                               # per pooling (~3 min each,
+                                               # ~8 min in total)
 ```
 
 Reading it honestly:
@@ -119,8 +154,14 @@ Reading it honestly:
   all 4,095 subsets" are choices you can only make after seeing which
   documents are machine-written. A real accuser has the circulating
   checklist, not the labels. Reported here because a skeptic should be
-  able to see the ceiling, not because it is a rule anyone could have
-  applied in advance.
+  able to see how far label knowledge gets you, not because it is a rule
+  anyone could have applied in advance.
+- ***fitted* means it is no longer the checklist.** The signed rows need
+  the answer key twice over: once to pick the subset, and once to decide
+  which tells to *reverse*. A rule that flags prose for having too FEW
+  exclamation marks is not the folk claim by any reading — it is a
+  classifier trained on these labels, reported here so nobody has to
+  discover it later and call it a refutation.
 - **Three rows are not oracles.** The named triple (0.7275) is the set
   this project's own repository description used to name; the headline
   triple (0.7056) is the first three tells this repository's own
@@ -137,10 +178,12 @@ Reading it honestly:
   included, and the em dash's CI [0.483, 0.849] crosses chance. At the
   threshold that catches half the machine samples it also flags 28.7% of
   the novelist windows, and its per-model medians run 0.00–7.01.
-- **0.74 is a real signal and still not an accusation.** The exhaustive
-  ceiling separates the two corpora at 0.741, and even that does not
-  license a verdict on one document, which is the thing an accused writer
-  is facing.
+- **0.74, and even 0.88, is still not an accusation.** The folk
+  direction's own maximum separates the two corpora at 0.741 and the
+  fitted signed classifier at 0.880 — and neither licenses a verdict on
+  one document, which is the thing an accused writer is facing. Corpus
+  separation and document-level identification are different problems,
+  and only the second one convicts anybody.
 
 That last point is worth making concrete. Under the rule an accuser
 actually applies — flag the document if *any* tell exceeds the novelist
@@ -318,14 +361,18 @@ python3 -m pytest test_score_tells.py    # if you have pytest
 python3 test_score_tells.py              # stdlib unittest fallback
 ```
 
-41 tests (~20 s, most of it the exhaustive sweeps): the counter
+49 tests (~20 s, most of it the positive-direction sweeps): the counter
 behaviors and documented exclusions, the AUC/threshold/percentile
 machinery, checks that both `--reproduce` paths exit 0 against the
 bundled JSON and fail on tampered rows, the pooling variants, the
-exhaustive sweep (that its fast path is bit-identical to the
-named-variant path, and that its maxima bound every named variant),
-which variants are marked *oracle*, the README-consistency check
-against a doctored README, and the text-scoring path.
+positive-direction sweep (that its fast path is bit-identical to the
+named-variant path, and that its maxima bound every named variant), the
+signed sweep (that the pinned vectors reproduce their AUCs, that an
+all-positive vector matches the subset path exactly, that negating a
+vector inverts its AUC, and that the enumerator is exhaustive on a
+reduced space small enough to brute-force), which variants are marked
+*oracle* and which *fitted*, the README-consistency check against a
+doctored README, and the text-scoring path.
 
 ## License
 
