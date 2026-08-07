@@ -33,7 +33,7 @@ The practical reading for writers follows from the layer split: the features the
 
 ## What the folk-tells result is sensitive to
 
-Finding 4's headline number combines all twelve tells in the folk direction. That is the honest test of the folk claim — the claim on offer is that *all of these* indicate AI, and the circulating checklists are used as a list — but summing twelve counters is one of several defensible choices, and the choice moves the number a long way. So here is the whole sweep rather than the row that flatters the argument:
+Finding 4's headline number combines all twelve tells in the folk direction. That is the honest test of the folk claim — the claim on offer is that *all of these* indicate AI, and the circulating checklists are used as a list — but summing twelve counters is one of several defensible choices, and the choice moves the number a long way. So rather than publish the row that flatters the argument, here are the named alternatives *and* the measured ceiling: the best AUC reachable by any of the 4,095 nonempty subsets of the twelve tells, under each pooling.
 
 | Aggregation of the twelve tells | AUC |
 |---|---|
@@ -45,16 +45,19 @@ Finding 4's headline number combines all twelve tells in the folk direction. Tha
 | Named triple: em dash, "not X, but Y", "delve" | 0.7275 |
 | Best pair: em dash + "not X, but Y" | 0.7343 |
 | Em dash alone | 0.6804 |
+| Exhaustive maximum over all 4,095 subsets (z-sum) | 0.7409 |
+| Exhaustive maximum over all 4,095 subsets (rank-sum) | 0.7285 |
+| Exhaustive maximum over all 4,095 subsets (log1p z-sum) | 0.7300 |
 
-Three things to read off it. First, the best-scoring subsets are **oracle** subsets: you can only drop "the tells that run backwards," or keep the best pair, once you already know which documents are machine-written — and an accuser knows no such thing. They have the circulating list, which is the first row.
+Three things to read off it. First, the ceiling is **0.741**, and it is an **oracle** number: all three poolings are maximized by the same triple — em dash + "not X, but Y" + staging adverbs — and that subset, like "drop the tells that run backwards" and "keep the best pair," is identifiable only by someone who already knows which documents are machine-written. An accuser knows no such thing. They have the circulating list, which is the first row.
 
-Second, two rows are *not* oracles, and they are the ones worth arguing with: the em dash alone (0.6804) and the three tells this repository's own description used to name (0.7275). Someone applying the single most famous tell, with no labels at all, does beat chance on these corpora. So the claim the data supports is not "the em dash is noise" — it is that the list is a coin flip and its best member is a weak, model-specific signal. The per-tell table in [`tells/`](tells/) reports the em dash on its own terms: a cluster-bootstrap CI of [0.483, 0.849] that crosses chance once author and model clustering are accounted for, per-model medians running from 0.00 to 7.01, and — at the threshold that catches half the machine samples — 28.7% of celebrated-novelist windows flagged along with them.
+Second, three rows are *not* oracles, and they are the ones worth arguing with: the em dash alone (0.6804), the three tells this repository's own description used to name (0.7275), and the first three tells finding 4 above names — em dash, "not X, but Y", rule-of-three triads (0.7056). Someone applying the single most famous tell, or simply taking our own framing at face value, beats chance on these corpora with no labels at all: 0.68 for the em dash on its own, 0.71–0.73 for either triple, against an oracle ceiling of 0.741. So the claim the data supports is not "the em dash is noise" — it is that the list *as a list* is a coin flip and its best member is a weak, model-specific signal. The per-tell table in [`tells/`](tells/) reports the em dash on its own terms: a cluster-bootstrap CI of [0.483, 0.849] that crosses chance once author and model clustering are accounted for, per-model medians running from 0.00 to 7.01, and — at the threshold that catches half the machine samples — 28.7% of celebrated-novelist windows flagged along with them.
 
 Third, none of it survives contact with the actual use case, which is a verdict about *one* document. Under the rule an accuser applies — flag if *any* tell exceeds the novelist 95th percentile — the three headline tells flag 44.2% of the machine samples and 12.8% of the celebrated-novelist windows.
 
-Recompute all of it, including variants not shown here, with `python3 tells/sensitivity_variants.py`; `--reproduce` re-derives every figure above from the bundled rows and fails loudly on drift.
+Recompute all of it, including variants not shown here, with `python3 tells/sensitivity_variants.py`; `--reproduce` re-derives every figure above from the bundled rows, checks that both READMEs still render the numbers the code computes, and fails loudly on drift.
 
-A worked example at our own expense: score this README and it comes back at 21.8 em dashes per 1,000 words, 12.8× the celebrated-novelist median of 1.71 and 5.9× the AI median. It was written by a human who likes em dashes, about a study of whether liking em dashes means anything. That is the finding rather than a counterexample to it: the tell tracks register and habit, not authorship.
+A worked example at our own expense: score this README — as tagged at `v0.5.5-r1`, since editing the page moves its own rates (`git show v0.5.5-r1:README.md | python3 tells/score_tells.py`) — and it comes back at 21.8 em dashes per 1,000 words, 12.8× the celebrated-novelist median of 1.71 and 5.9× the AI median. It was written by a human who likes em dashes, about a study of whether liking em dashes means anything. That is the finding rather than a counterexample to it: the tell tracks register and habit, not authorship.
 
 ## How the work was tested
 

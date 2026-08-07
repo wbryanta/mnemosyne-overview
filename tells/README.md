@@ -60,11 +60,13 @@ wrote a text would help; knowing that a machine did tells you little.
 
 ## How much does the aggregation choice matter?
 
-A lot, and in both directions — so the whole sweep is published here
-rather than left for someone else to find. The headline combines all
-twelve tells in the folk direction with z-scores anchored on the human
-windows. Other poolings and other subsets of the same twelve counters,
-on the same rows:
+A lot, and in both directions — so it is published here rather than left
+for someone else to find, and the ceiling is *measured* rather than
+guessed at from a hand-picked list. The headline combines all twelve
+tells in the folk direction with z-scores anchored on the human windows.
+Below: other poolings and other subsets of the same twelve counters, on
+the same rows, and then the exhaustive maximum over **all 4,095 nonempty
+subsets** of the twelve tells under each pooling.
 
 | Aggregation | AUC |
 |---|---|
@@ -75,13 +77,33 @@ on the same rows:
 | 8 forward tells (drop the 4 that ran human-high) *oracle* | 0.6657 |
 | 8 forward tells, rank-sum pooling *oracle* | 0.6811 |
 | 8 forward tells, log1p rates, z-sum *oracle* | 0.6549 |
-| 3 headline tells: em dash / not-X-but-Y / tricolon *oracle* | 0.7056 |
+| 3 headline tells: em dash / not-X-but-Y / tricolon | 0.7056 |
 | named triple: em dash / not-X-but-Y / delve | 0.7275 |
 | best pair: em dash + not-X-but-Y *oracle* | 0.7343 |
 | em dash alone | 0.6804 |
+| exhaustive maximum over all 4,095 subsets, z-sum *oracle* | 0.7409 |
+| exhaustive maximum over all 4,095 subsets, rank-sum *oracle* | 0.7285 |
+| exhaustive maximum over all 4,095 subsets, log1p z-sum *oracle* | 0.7300 |
+
+All three exhaustive maxima are reached by the *same* three tells — em
+dash + "not X, but Y" + staging adverbs — which is not a subset any
+circulating checklist names, and not one anybody can identify without the
+answer key.
+
+So the three numbers to hold onto: the **oracle ceiling is 0.741**, and
+it takes label knowledge to reach; **label-free constructions reach
+0.71–0.73** (the named triple 0.7275, the headline triple 0.7056; the em
+dash alone 0.6804); and the **published all-twelve folk-direction sum is
+0.5058**, a coin flip. The gap between the first two is small, which is
+the honest reading: an accuser who guesses well is not far off the best
+that could be done with these counters — and the best that could be done
+with these counters is still not an accusation (see the last bullet
+below).
 
 ```
-python3 sensitivity_variants.py              # the table above
+python3 sensitivity_variants.py              # the table above (~6 s: the
+                                             # exhaustive sweep is 3 × 4,095
+                                             # subsets, scored from the rows)
 python3 sensitivity_variants.py --reproduce  # verify it, exit nonzero on drift
 ```
 
@@ -93,27 +115,32 @@ Reading it honestly:
   the claim that was made. Every alternative pooling of all twelve
   (pooled-anchored, rank-sum, log1p) lands at or below chance, 0.44–0.51.
 - ***oracle* means the subset needs the answer key.** "Drop the tells
-  that run backwards" and "keep the best pair" are choices you can only
-  make after seeing which documents are machine-written. A real accuser
-  has the circulating checklist, not the labels. Reported here because a
-  skeptic should be able to see the ceiling, not because it is a rule
-  anyone could have applied in advance.
-- **Two rows are not oracles.** The named triple (0.7275) is the set
-  this project's own repository description used to name, and the em
-  dash alone (0.6804) is the most famous tell there is; either could be
-  picked in advance, and both beat chance here. That is the honest
-  counter-argument to the headline, so it is printed in the same table.
-  What it supports is "the circulating list is a coin flip and its best
-  member is a weak, model-specific signal," not "these features are
-  noise."
+  that run backwards," "keep the best pair," and "take the argmax over
+  all 4,095 subsets" are choices you can only make after seeing which
+  documents are machine-written. A real accuser has the circulating
+  checklist, not the labels. Reported here because a skeptic should be
+  able to see the ceiling, not because it is a rule anyone could have
+  applied in advance.
+- **Three rows are not oracles.** The named triple (0.7275) is the set
+  this project's own repository description used to name; the headline
+  triple (0.7056) is the first three tells this repository's own
+  front-page description highlights — em dash, "not X, but Y,"
+  rule-of-three triads — so a reader who took our own framing at face
+  value would score them; and the em dash alone (0.6804) is the most
+  famous tell there is. Any of the three could be picked in advance, and
+  all three beat chance here. That is the honest counter-argument to the
+  headline, so it is printed in the same table. What it supports is "the
+  circulating list is a coin flip and its best member is a weak,
+  model-specific signal," not "these features are noise."
 - **The strong tells were reported individually all along** — they are
   the first rows of the per-tell table in *The numbers*, cluster CIs
   included, and the em dash's CI [0.483, 0.849] crosses chance. At the
   threshold that catches half the machine samples it also flags 28.7% of
   the novelist windows, and its per-model medians run 0.00–7.01.
-- **0.73 is a real signal and still not an accusation.** A subset that
-  separates two corpora at 0.73 does not license a verdict on one
-  document, which is the thing an accused writer is facing.
+- **0.74 is a real signal and still not an accusation.** The exhaustive
+  ceiling separates the two corpora at 0.741, and even that does not
+  license a verdict on one document, which is the thing an accused writer
+  is facing.
 
 That last point is worth making concrete. Under the rule an accuser
 actually applies — flag the document if *any* tell exceeds the novelist
@@ -126,8 +153,11 @@ actually applies — flag the document if *any* tell exceeds the novelist
 | 3 headline | 44.2% | 12.8% |
 
 One in eight celebrated-novelist windows fails even the narrowest and
-most favorable version of the test — and that version is the one no
-accuser can construct without already knowing the answer.
+most favorable version of the test — and that version is one an accuser
+*can* construct without the labels, since it is the triple this
+repository's own front page names first. The narrowness is what buys the
+lower false-flag rate, and it still condemns 12.8% of celebrated
+novelists.
 
 ## Score your own prose
 
@@ -288,10 +318,14 @@ python3 -m pytest test_score_tells.py    # if you have pytest
 python3 test_score_tells.py              # stdlib unittest fallback
 ```
 
-30 tests: the counter behaviors and documented exclusions, the
-AUC/threshold/percentile machinery, checks that both `--reproduce` paths
-exit 0 against the bundled JSON and fail on tampered rows, the pooling
-variants, and the text-scoring path.
+41 tests (~20 s, most of it the exhaustive sweeps): the counter
+behaviors and documented exclusions, the AUC/threshold/percentile
+machinery, checks that both `--reproduce` paths exit 0 against the
+bundled JSON and fail on tampered rows, the pooling variants, the
+exhaustive sweep (that its fast path is bit-identical to the
+named-variant path, and that its maxima bound every named variant),
+which variants are marked *oracle*, the README-consistency check
+against a doctored README, and the text-scoring path.
 
 ## License
 

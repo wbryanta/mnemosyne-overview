@@ -251,5 +251,149 @@ class TestSensitivityVariants(unittest.TestCase):
                          sorted(st.TELL_IDS))
 
 
+class TestExhaustiveSweep(unittest.TestCase):
+    # The sweep is what turns "here are some subsets we tried" into "here
+    # is the ceiling". These pin that it is exhaustive, that its fast path
+    # agrees with the named-variant path, and that its maxima really do
+    # bound every named variant of the same pooling.
+
+    @classmethod
+    def setUpClass(cls):
+        import json
+        data = json.loads((HERE / "folk_tells_results.json").read_text(
+            encoding="utf-8"))
+        cls.human = data["human_window_rows"]
+        cls.ai = data["ai_sample_rows"]
+
+    def test_sweep_covers_every_nonempty_subset(self):
+        self.assertEqual(2 ** len(st.TELL_IDS) - 1, 4095)
+
+    def test_component_path_matches_the_named_variant_path(self):
+        # The exhaustive sweep sums precomputed per-tell components; the
+        # named variants sum inside z_sum/rank_sum. Bit-identical, or the
+        # sweep is measuring something other than what it reports.
+        subsets = [["em_dash"], sv.BEST_PAIR, sv.HEADLINE_TELLS,
+                   sv.FORWARD_TELLS, list(st.TELL_IDS)]
+        human_log = sv.log1p_rows(self.human)
+        ai_log = sv.log1p_rows(self.ai)
+        for pooling, naive in (
+                ("zsum_human",
+                 lambda ts: sv.z_sum(self.human, self.ai, ts)),
+                ("ranksum",
+                 lambda ts: sv.rank_sum(self.human, self.ai, ts)),
+                ("log1p_zsum",
+                 lambda ts: sv.z_sum(human_log, ai_log, ts))):
+            components = sv.pooling_components(self.human, self.ai, pooling)
+            for tells in subsets:
+                human, ai = naive(tells)
+                self.assertEqual(
+                    sv.subset_auc(components, tells),
+                    st.mann_whitney_auc(ai, human),
+                    "{0} disagrees on {1}".format(pooling, tells))
+
+    def test_maxima_and_members_match_the_pinned_values(self):
+        published = {key: value for key, _, value in sv.PUBLISHED_AUC}
+        for key, pooling in sv.EXHAUSTIVE_VARIANTS:
+            auc, members = sv.exhaustive_max(self.human, self.ai, pooling)
+            self.assertAlmostEqual(auc, published[key], places=12)
+            self.assertEqual(members, sv.PUBLISHED_ORACLE_MEMBERS[key])
+
+    def test_oracle_maximum_bounds_every_named_variant_of_its_pooling(self):
+        published = {key: value for key, _, value in sv.PUBLISHED_AUC}
+        bounded = {
+            "oracle_max_zsum": ["published", "forward8", "headline3", "pair2",
+                                "named3", "em_dash_alone"],
+            "oracle_max_ranksum": ["ranksum12", "ranksum8"],
+            "oracle_max_log1p": ["log1p12", "log1p8"],
+        }
+        for oracle_key, keys in bounded.items():
+            for key in keys:
+                self.assertLessEqual(published[key], published[oracle_key],
+                                     "{0} exceeds {1}".format(key, oracle_key))
+
+
+class TestOracleClassification(unittest.TestCase):
+    # Which variants an accuser could actually construct is a claim the
+    # table makes in print; these pin it so it cannot drift silently. The
+    # headline triple is label-free because it is the first three tells
+    # this repository's own front page highlights -- not because it
+    # happened to score well.
+
+    def test_label_free_variants_are_exactly_the_three_documented_ones(self):
+        all_twelve = ("published", "pooled12", "ranksum12", "log1p12")
+        label_free = {key for key, label, _ in sv.PUBLISHED_AUC
+                      if "*oracle*" not in label and key not in all_twelve}
+        self.assertEqual(label_free, {"headline3", "named3", "em_dash_alone"})
+
+    def test_every_exhaustive_variant_is_marked_oracle(self):
+        labels = {key: label for key, label, _ in sv.PUBLISHED_AUC}
+        for key, _pooling in sv.EXHAUSTIVE_VARIANTS:
+            self.assertIn("*oracle*", labels[key])
+
+    def test_headline_triple_is_the_readmes_first_three_tells(self):
+        # The provenance claim, checked against the shipped README rather
+        # than asserted in prose: the first tell phrase the page names is
+        # the em dash, then "not X, but Y", then the rule of three -- which
+        # is HEADLINE_TELLS, in order.
+        text = (HERE / "README.md").read_text(encoding="utf-8").lower()
+        opening = text[:text.index("## the numbers")]
+        phrases = ["em dash", '"not x, but y', "rule-of-three triads"]
+        for phrase in phrases:
+            self.assertIn(phrase, opening)
+        self.assertEqual(sorted(phrases, key=opening.index), phrases)
+        self.assertEqual(sv.HEADLINE_TELLS,
+                         ["em_dash", "not_x_but_y", "tricolon"])
+
+
+class TestReadmeConsistency(unittest.TestCase):
+    # --reproduce claims to verify the published tables. These pin that the
+    # claim is real: the shipped READMEs pass, and a doctored one fails.
+
+    def test_shipped_readmes_render_the_module_constants(self):
+        failures = [msg for ok, msg in sv.check_readmes() if not ok]
+        self.assertEqual(failures, [])
+
+    def _tampered_copy(self, tmpdir, transform):
+        import shutil
+        tampered = Path(tmpdir) / "README.md"
+        shutil.copy(sv.TELLS_README, tampered)
+        tampered.write_text(
+            transform(tampered.read_text(encoding="utf-8")), encoding="utf-8")
+        return sv.check_readmes(
+            auc_readmes=[(tampered, dict(sv.README_AUC_ROWS[0][1]))],
+            any_rule_readme=tampered)
+
+    def test_tampered_readme_value_fails(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self._tampered_copy(
+                tmpdir, lambda t: t.replace("| 0.5058 |", "| 0.6058 |"))
+        failures = [msg for ok, msg in results if not ok]
+        self.assertEqual(len(failures), 1, failures)
+        self.assertIn("auc[published]", failures[0])
+
+    def test_tampered_percentage_fails(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self._tampered_copy(
+                tmpdir, lambda t: t.replace("| 44.2% |", "| 40.2% |"))
+        failures = [msg for ok, msg in results if not ok]
+        self.assertEqual(len(failures), 1, failures)
+        self.assertIn("any3[ai]", failures[0])
+
+    def test_deleted_readme_row_fails(self):
+        import tempfile
+
+        def drop_row(text):
+            return "\n".join(line for line in text.splitlines()
+                             if not line.startswith("| em dash alone "))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self._tampered_copy(tmpdir, drop_row)
+        failures = [msg for ok, msg in results if not ok]
+        self.assertTrue(any("em_dash_alone" in msg for msg in failures),
+                        failures)
+
+
 if __name__ == "__main__":
     unittest.main()
