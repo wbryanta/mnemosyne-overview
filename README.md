@@ -50,6 +50,8 @@ Two things to read off it. First, every subset that beats the coin flip is an **
 
 Recompute all of it, including variants not shown here, with `python3 tells/sensitivity_variants.py`; `--reproduce` re-derives every figure above from the bundled rows and fails loudly on drift.
 
+A worked example at our own expense: score this README and it comes back at 21.6 em dashes per 1,000 words, 12.7× the celebrated-novelist median of 1.71 and 5.8× the AI median. It was written by a human who likes em dashes, about a study of whether liking em dashes means anything. That is the finding rather than a counterexample to it: the tell tracks register and habit, not authorship.
+
 ## How the work was tested
 
 The findings survived a process I care about as much as the results:
