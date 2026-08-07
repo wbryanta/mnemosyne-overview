@@ -4,7 +4,7 @@ This is the operationalized "AI tells" study from the forthcoming paper
 (*The Width of a Voice*, finding 4), packaged so you can check it yourself.
 Twelve popular tells — the em dash, "not X, but Y," rule-of-three triads,
 "delve"/"leverage," corporate jargon, hedging, and the rest of the
-circulating checklists — were counted with conservative regexes in 390
+circulating checklists — were counted with simple fixed regexes in 390
 windows of celebrated novelists' prose (15 authors, 78 works, 3,500 words
 per window) and 400 unprompted AI long-form fiction samples (8 models,
 truncated to 3,500 words). "Unprompted" means no author or style
@@ -98,11 +98,15 @@ Reading it honestly:
   skeptic should be able to see the ceiling, not because it is a rule
   anyone could have applied in advance.
 - **The strong tells were reported individually all along** — they are
-  the top rows of the table above, cluster CIs included, and the em
-  dash's CI [0.483, 0.849] crosses chance.
-- **0.73 is a real signal and still not an accusation.** Under the rule
-  an accuser actually applies — flag if *any* tell exceeds the novelist
-  95th percentile — the numbers are:
+  the first rows of the per-tell table in *The numbers*, cluster CIs
+  included, and the em dash's CI [0.483, 0.849] crosses chance.
+- **0.73 is a real signal and still not an accusation.** A subset that
+  separates two corpora at 0.73 does not license a verdict on one
+  document, which is the thing an accused writer is facing.
+
+That last point is worth making concrete. Under the rule an accuser
+actually applies — flag the document if *any* tell exceeds the novelist
+95th percentile — the numbers are:
 
 | Tells used | AI flagged | Novelist windows flagged |
 |---|---|---|
@@ -110,9 +114,9 @@ Reading it honestly:
 | 8 forward | 51.7% | 23.8% |
 | 3 headline | 44.2% | 12.8% |
 
-  One in eight celebrated-novelist windows fails the narrowest, most
-  favorable version of the test, and that version is the one no accuser
-  can construct without the labels.
+One in eight celebrated-novelist windows fails even the narrowest and
+most favorable version of the test — and that version is the one no
+accuser can construct without already knowing the answer.
 
 ## Score your own prose
 
@@ -215,8 +219,9 @@ matter — those *are* reproducible here, from the bundled rows.)
 "not … , but" within a 40-character span, which catches the contrastive
 reframing the tell is about ("It was not anger, but grief") *and* plain
 finite-clause negation ("He did not want to go, but he went" — counted
-as 1). Measured: 459 of 1,474 matches on the human side (31.1%) and 75
-of 450 on the AI side (16.7%) are ordinary negation. The overcount is
+as 1). Measured: 459 of 1,474 matches across the 78 novels (31.1%) and
+75 of 450 across the 400 AI samples (16.7%) are ordinary negation rather
+than reframing. The overcount is
 about twice as heavy on the novelists, which means it runs *toward* this
 study's own negative conclusion. Restricting the counter to
 reframing-only (dropping matches whose "but"-clause has a finite subject
