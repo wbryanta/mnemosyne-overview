@@ -14,10 +14,16 @@ could think of, hostile ones included, from the same bundled rows that
 
 What the spread shows: subsets chosen *with label knowledge* — keeping
 only the tells that ran in the folk direction on this data — score
-0.67-0.73. An accuser in the wild does not have that oracle; they have
-the circulating list. The strongest individual tells were reported
-individually in the paper and in the table in README.md, where the em
-dash's cluster CI crosses chance.
+0.67-0.73, and an accuser in the wild does not have that oracle; they
+have the circulating list, which is the first row. Two variants below
+are marked as oracle-free because they could have been picked in
+advance and still beat chance: the em dash alone, and the three tells
+this project's own repository description used to name. They are here
+because they are the honest counter-argument to the headline. What they
+support is that the list is a coin flip and its best member is a weak,
+model-specific signal — the em dash's cluster CI crosses chance, and
+its per-model medians run 0.00-7.01. Both are reported per-tell in
+README.md.
 
   python3 sensitivity_variants.py
       Print the variant table.
@@ -202,6 +208,7 @@ def render(auc: Dict[str, float],
         "Combined-score aggregation sensitivity (AUC = P(AI > human window)).",
         "*oracle* = the subset can only be chosen by someone who already knows",
         "which documents are AI; an accuser with the circulating list cannot.",
+        "Unmarked subsets could be chosen in advance, without the labels.",
         "",
         "  {0}  {1:>7}".format("variant".ljust(width), "AUC"),
         "  {0}  {1}".format("-" * width, "-" * 7),

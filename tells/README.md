@@ -97,9 +97,19 @@ Reading it honestly:
   has the circulating checklist, not the labels. Reported here because a
   skeptic should be able to see the ceiling, not because it is a rule
   anyone could have applied in advance.
+- **Two rows are not oracles.** The named triple (0.7275) is the set
+  this project's own repository description used to name, and the em
+  dash alone (0.6804) is the most famous tell there is; either could be
+  picked in advance, and both beat chance here. That is the honest
+  counter-argument to the headline, so it is printed in the same table.
+  What it supports is "the circulating list is a coin flip and its best
+  member is a weak, model-specific signal," not "these features are
+  noise."
 - **The strong tells were reported individually all along** — they are
   the first rows of the per-tell table in *The numbers*, cluster CIs
-  included, and the em dash's CI [0.483, 0.849] crosses chance.
+  included, and the em dash's CI [0.483, 0.849] crosses chance. At the
+  threshold that catches half the machine samples it also flags 28.7% of
+  the novelist windows, and its per-model medians run 0.00–7.01.
 - **0.73 is a real signal and still not an accusation.** A subset that
   separates two corpora at 0.73 does not license a verdict on one
   document, which is the thing an accused writer is facing.
@@ -221,9 +231,9 @@ reframing the tell is about ("It was not anger, but grief") *and* plain
 finite-clause negation ("He did not want to go, but he went" — counted
 as 1). Measured: 459 of 1,474 matches across the 78 novels (31.1%) and
 75 of 450 across the 400 AI samples (16.7%) are ordinary negation rather
-than reframing. The overcount is
-about twice as heavy on the novelists, which means it runs *toward* this
-study's own negative conclusion. Restricting the counter to
+than reframing. The overcount is about twice as heavy on the novelists,
+which means it runs *toward* this study's own negative conclusion.
+Restricting the counter to
 reframing-only (dropping matches whose "but"-clause has a finite subject
 and verb) moves the tell from AUC 0.6211 to 0.6182, and the combined
 all-twelve score from 0.5058 to 0.5116 — the coin flip survives the

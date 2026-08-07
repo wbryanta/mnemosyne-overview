@@ -46,11 +46,15 @@ Finding 4's headline number combines all twelve tells in the folk direction. Tha
 | Best pair: em dash + "not X, but Y" | 0.7343 |
 | Em dash alone | 0.6804 |
 
-Two things to read off it. First, every subset that beats the coin flip is an **oracle** subset: you can only drop "the tells that run backwards" once you already know which documents are machine-written, which is precisely what an accuser does not know — they have the circulating list, and the circulating list is the first row. Second, the strong tells were never buried inside the combined score; they are reported individually in the per-tell table in [`tells/`](tells/), where the em dash's cluster-bootstrap CI [0.483, 0.849] crosses chance. A pair at 0.73 is a real signal and still not a usable accusation: under the rule an accuser actually applies — flag the document if *any* tell exceeds the novelist 95th percentile — the three headline tells flag 44.2% of the machine samples and 12.8% of the celebrated-novelist windows.
+Three things to read off it. First, the best-scoring subsets are **oracle** subsets: you can only drop "the tells that run backwards," or keep the best pair, once you already know which documents are machine-written — and an accuser knows no such thing. They have the circulating list, which is the first row.
+
+Second, two rows are *not* oracles, and they are the ones worth arguing with: the em dash alone (0.6804) and the three tells this repository's own description used to name (0.7275). Someone applying the single most famous tell, with no labels at all, does beat chance on these corpora. So the claim the data supports is not "the em dash is noise" — it is that the list is a coin flip and its best member is a weak, model-specific signal. The per-tell table in [`tells/`](tells/) reports the em dash on its own terms: a cluster-bootstrap CI of [0.483, 0.849] that crosses chance once author and model clustering are accounted for, per-model medians running from 0.00 to 7.01, and — at the threshold that catches half the machine samples — 28.7% of celebrated-novelist windows flagged along with them.
+
+Third, none of it survives contact with the actual use case, which is a verdict about *one* document. Under the rule an accuser applies — flag if *any* tell exceeds the novelist 95th percentile — the three headline tells flag 44.2% of the machine samples and 12.8% of the celebrated-novelist windows.
 
 Recompute all of it, including variants not shown here, with `python3 tells/sensitivity_variants.py`; `--reproduce` re-derives every figure above from the bundled rows and fails loudly on drift.
 
-A worked example at our own expense: score this README and it comes back at 21.6 em dashes per 1,000 words, 12.7× the celebrated-novelist median of 1.71 and 5.8× the AI median. It was written by a human who likes em dashes, about a study of whether liking em dashes means anything. That is the finding rather than a counterexample to it: the tell tracks register and habit, not authorship.
+A worked example at our own expense: score this README and it comes back at 22.0 em dashes per 1,000 words, 12.9× the celebrated-novelist median of 1.71 and 5.9× the AI median. It was written by a human who likes em dashes, about a study of whether liking em dashes means anything. That is the finding rather than a counterexample to it: the tell tracks register and habit, not authorship.
 
 ## How the work was tested
 
