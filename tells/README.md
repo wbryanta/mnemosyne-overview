@@ -180,13 +180,80 @@ texts, which are copyrighted novels and are not redistributed).
   this helps") never occurred in either corpus: zero occurrences in 390
   human windows and 400 AI samples. The scorer notes them if it sees
   them but they were never scored.
-- **Counters are deliberately conservative.** Bounded-span regexes,
-  blocklists, and framing requirements mean undercounting is possible
-  and silent overcounting is not. The exclusions are documented inline
-  in `score_tells.py` and pinned by `test_score_tells.py`.
+- **Counters are simple, and simple cuts both ways.** Bounded-span
+  regexes, blocklists, and framing requirements make these counters miss
+  things — that part was intended. They also let some things through
+  that the tell was not meant to catch, which was not: an audit of the
+  counters against the corpora found real overcounting in three of the
+  twelve. Each one is quantified in *What the counters actually count*
+  below, with its measured effect on the published AUCs. The exclusions
+  are documented inline in `score_tells.py` and pinned by
+  `test_score_tells.py`.
 - **This is not a detector, in either direction.** A low score does not
   clear a text and a high score does not convict one. The study's point
   is that the checklist cannot do either job.
+
+## What the counters actually count
+
+An adversarial audit of the counters (2026-08-06) measured where each
+one departs from the tell it is named for. Nothing below changes the
+shipped counters or the published numbers — the numbers are what they
+are, and a counter changed after the fact would make them
+unreproducible. What follows is the measured size and direction of each
+defect, so a reader can discount the results correctly rather than
+discover the defects later.
+
+These measurements run over the study corpora, not over the bundled
+rates, so they are reported here rather than reproducible from this
+repo: the human side is copyrighted novels that are not redistributed.
+Each is stated precisely enough to re-run against any corpus you do
+have, and the counters they audit are the ones in `score_tells.py`.
+(The pooling and subset variants in the previous section are a different
+matter — those *are* reproducible here, from the bundled rows.)
+
+**`not_x_but_y` overcounts ordinary negation.** The pattern is any
+"not … , but" within a 40-character span, which catches the contrastive
+reframing the tell is about ("It was not anger, but grief") *and* plain
+finite-clause negation ("He did not want to go, but he went" — counted
+as 1). Measured: 459 of 1,474 matches on the human side (31.1%) and 75
+of 450 on the AI side (16.7%) are ordinary negation. The overcount is
+about twice as heavy on the novelists, which means it runs *toward* this
+study's own negative conclusion. Restricting the counter to
+reframing-only (dropping matches whose "but"-clause has a finite subject
+and verb) moves the tell from AUC 0.6211 to 0.6182, and the combined
+all-twelve score from 0.5058 to 0.5116 — the coin flip survives the
+correction, marginally weakened.
+
+**`tricolon` is a serial-comma-triad proxy, not a rule-of-three
+detector.** It requires the serial (Oxford) comma and 1–2 word items,
+so "red, white and blue" is missed, as is any triad with longer items or
+clause-length members. Read the row as "serial-comma triads with short
+items"; it is as much a punctuation-style measure as a rhetorical one.
+
+**The `-est` blocklist leaks non-superlatives.** The blocklist is a
+fixed word list, so `-est` tokens outside it are counted as superlatives
+whether or not they are: *unrest*, *Budapest*, *Bucharest*,
+*palimpsest*, and — from a pass over every unblocked `-est` token in
+both corpora — proper nouns and compounds like *Ernest*, *Forrest*,
+*Suncrest*, *Pinterest*, *armrest*, *headrest*, *houseguest*. The four
+named tokens are 8 of 1,506 human superlative counts (0.53%) and 9 of
+759 AI counts (1.19%); hand-classifying every unblocked `-est` type puts
+the total false-superlative share at 41/1,506 (2.7%) human and 29/759
+(3.8%) AI. The effect on the result is immaterial: dropping the four
+named tokens moves the tell from AUC 0.3049 to 0.3035, and dropping
+every hand-classified non-superlative moves it to 0.3067. It stays one
+of the strongly backwards tells.
+
+**`exclamation` counts marks inside quoted dialogue.** The counter sees
+punctuation, not who is speaking, and the two corpora differ in how much
+dialogue they contain: 14.5% of characters in the novelist windows fall
+inside quotation marks versus 9.2% in the AI samples, and 57.2% of the
+novelists' exclamation marks are inside dialogue versus 91.4% of the
+machines'. So the strongest backwards tell is partly measuring register.
+Counting narration only (a paired-quote heuristic, exclamation marks
+inside quotes ignored) moves it from AUC 0.2376 to 0.3263: still
+backwards, still nowhere near a usable AI signal, but roughly a third of
+the distance to chance was dialogue rather than authorship.
 
 ## Data note
 
