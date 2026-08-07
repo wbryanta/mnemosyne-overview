@@ -1,7 +1,8 @@
 # Folk "AI Tells" — Scorer and Published Aggregates
 
-This is the operationalized "AI tells" study from the forthcoming paper
-(*The Width of a Voice*, finding 4), packaged so you can check it yourself.
+This is the operationalized "AI tells" study from the preprint
+(*The Width of a Voice*, v0.5.5, finding 4), packaged so you can check
+it yourself.
 Twelve popular tells — the em dash, "not X, but Y," rule-of-three triads,
 "delve"/"leverage," corporate jargon, hedging, and the rest of the
 circulating checklists — were counted with simple fixed regexes in 390
